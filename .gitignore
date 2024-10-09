@@ -1,0 +1,4 @@
+*.pem
+*.srl
+*.pb.go
+/shared_volume/*

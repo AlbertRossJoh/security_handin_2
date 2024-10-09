@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "grpc/proto";
+
+enum ErrorCode {
+    FAIL = 0;
+    SUCCESS = 1;
+    EXCEPTION = 2;
+}
+
+message Ack {
+    ErrorCode errorCode = 1;
+}
+
+message msg{
+    string message = 1;
+}
+
+message EmptyArg{
+
+}
+
+message Share{
+    string id = 1;
+    int32 message = 2;
+}
+
+message Id{
+    string id = 1;
+}
+
+service ShareService{
+    rpc Test(EmptyArg) returns (Ack);
+    rpc RegisterShare(Share) returns (Ack);
+}
+
+service HospitalService{
+    rpc RegisterOutput(Share) returns (Ack);
+    rpc RegisterClient(Id) returns (Ack);
+}

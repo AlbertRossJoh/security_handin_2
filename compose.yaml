@@ -1,0 +1,33 @@
+version: '3.8'
+
+networks:
+  server:
+services:
+  client:
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+    volumes:
+      - ./shared_volume:/var/hosts
+      - ./certs:/var/certs
+    networks:
+      server:
+    deploy:
+      mode: replicated
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+  server:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    volumes:
+      - ./shared_volume:/var/hosts
+      - ./certs:/var/certs
+    networks:
+      server:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
