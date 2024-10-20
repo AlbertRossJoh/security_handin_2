@@ -48,6 +48,13 @@ func (s *Server) RegisterOutput(ctx context.Context, in *proto.Share) (*proto.Ac
 
 func (s *Server) RegisterClient(ctx context.Context, in *proto.Id) (*proto.Ack, error) {
 	aggregate.wg.Add(1)
+	clientReg <- true
+	return &proto.Ack{
+		ErrorCode: proto.ErrorCode_SUCCESS,
+	}, nil
+}
+
+func (s *Server) Test(ctx context.Context, in *proto.EmptyArg) (*proto.Ack, error) {
 	return &proto.Ack{
 		ErrorCode: proto.ErrorCode_SUCCESS,
 	}, nil

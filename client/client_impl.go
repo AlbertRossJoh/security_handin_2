@@ -11,13 +11,14 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+var recievedIds = map[string]bool{}
+
 func StartServer(creds credentials.TransportCredentials) {
 	server := &Server{
 		id: dockerId,
 	}
 
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(SERVER_PORT))
-
 	if err != nil {
 		log.Fatalf("Could not create the server %v", err)
 	}
@@ -38,7 +39,7 @@ func (s *Server) Test(ctx context.Context, in *proto.EmptyArg) (*proto.Ack, erro
 }
 
 func (s *Server) RegisterShare(ctx context.Context, in *proto.Share) (*proto.Ack, error) {
-	outShare.RegisterShare(int(in.Message), in.Id)
+	shareChan <- in
 
 	return &proto.Ack{
 		ErrorCode: proto.ErrorCode_SUCCESS,

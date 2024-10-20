@@ -2,24 +2,14 @@ package service
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log"
 	proto "security_handin_2/grpc"
-	"strconv"
+	"time"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
 func RegisterOutput(share *proto.Share, toServerId string, creds credentials.TransportCredentials) (proto.ErrorCode, error) {
-	conn, err := grpc.NewClient(fmt.Sprintf("%s:%s", toServerId, strconv.Itoa(SERVER_PORT)),
-		grpc.WithTransportCredentials(creds))
-
-	if err != nil {
-		log.Println("Could not connect to server: ", toServerId)
-		return 0, errors.New("Could not connect to server: " + toServerId)
-	}
+	conn := getClientConn(toServerId, creds)
 
 	hospitalServiceClient := proto.NewHospitalServiceClient(conn)
 
@@ -33,13 +23,7 @@ func RegisterOutput(share *proto.Share, toServerId string, creds credentials.Tra
 }
 
 func RegisterClient(fromServerId string, toServerId string, creds credentials.TransportCredentials) (proto.ErrorCode, error) {
-	conn, err := grpc.NewClient(fmt.Sprintf("%s:%s", toServerId, strconv.Itoa(SERVER_PORT)),
-		grpc.WithTransportCredentials(creds))
-
-	if err != nil {
-		log.Println("Could not connect to server: ", toServerId)
-		return 0, errors.New("Could not connect to server: " + toServerId)
-	}
+	conn := getClientConn(toServerId, creds)
 
 	hospitalServiceClient := proto.NewHospitalServiceClient(conn)
 
@@ -50,4 +34,33 @@ func RegisterClient(fromServerId string, toServerId string, creds credentials.Tr
 	}
 
 	return ack.ErrorCode, nil
+}
+
+func HospitalTest(serverId string, creds credentials.TransportCredentials) (proto.ErrorCode, error) {
+	conn := getClientConn(serverId, creds)
+
+	shareServiceClient := proto.NewHospitalServiceClient(conn)
+
+	ack, err := shareServiceClient.Test(context.Background(), &proto.EmptyArg{})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return ack.ErrorCode, nil
+}
+
+func WaitForHospitalServiceStart(servers []string, creds credentials.TransportCredentials) {
+	for {
+		count := len(servers)
+		for _, serverId := range servers {
+			if _, err := HospitalTest(serverId, creds); err == nil {
+				count--
+			}
+			time.Sleep(time.Second)
+		}
+		if count == 0 {
+			break
+		}
+	}
 }

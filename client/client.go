@@ -4,7 +4,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"time"
 
 	proto "security_handin_2/grpc"
 	"security_handin_2/shared"
@@ -20,6 +19,7 @@ var (
 	caCertPath    = "/var/certs/ca/ca-cert.pem"
 	serverContext = ServerContext{Id2Int: map[string]int{}}
 	outShare      = OutShare{out: 0}
+	shareChan     = make(chan *proto.Share, 2)
 )
 
 const (
@@ -37,17 +37,22 @@ type ServerContext struct {
 
 func main() {
 	println("hi from " + dockerId)
-	shared.WriteToSharedFile(dockerId, shared.GetPath(NodesFilename))
-	config, err := cert.LoadTLSCredentials(certPath, keyPath, caCertPath)
+	//shared.WriteToSharedFile(dockerId, shared.GetPath(NodesFilename))
+	creds, err := cert.LoadTLSCredentials(certPath, keyPath, caCertPath, dockerId)
 	if err != nil {
 		log.Fatal("Could not load cert")
 	}
-	go StartServer(config)
-	time.Sleep(time.Second * 4)
+	go StartServer(creds)
 
 	hospitalId := shared.GetFileContents(dockerId, shared.GetPath("hospital"))[0]
-	service.RegisterClient(dockerId, hospitalId, config)
+	service.WaitForHospitalServiceStart([]string{hospitalId}, creds)
+	_, err = service.RegisterClient(dockerId, hospitalId, creds)
+	if err != nil {
+		log.Panicln(err.Error())
+	}
 	contents := shared.GetFileContents(dockerId, shared.GetPath(NodesFilename))
+	service.WaitForClientServiceStart(contents, creds)
+
 	for i, id := range contents {
 		serverContext.Id2Int[id] = i
 	}
@@ -67,17 +72,23 @@ func main() {
 				&proto.Share{
 					Id:      dockerId,
 					Message: int32(secret.GetShare(id)),
-				}, id, config)
+				}, id, creds)
 
 			if err != nil {
 				log.Println("could not dial: " + id)
-				log.Println(err.Error())
+				log.Panic(err.Error())
 				continue
 			}
-			//log.Println(res)
 		}
 	}
-	time.Sleep(time.Second * 4)
+
+	for i := 0; i < len(contents)-1; i++ {
+		in := <-shareChan
+		outShare.RegisterShare(int(in.Message), in.Id)
+	}
+
+	// patiently wait for the other clients
+	//time.Sleep(time.Second * 4)
 	outShare.PrintShare()
-	service.RegisterOutput(&proto.Share{Id: dockerId, Message: int32(outShare.out)}, hospitalId, config)
+	service.RegisterOutput(&proto.Share{Id: dockerId, Message: int32(outShare.out)}, hospitalId, creds)
 }

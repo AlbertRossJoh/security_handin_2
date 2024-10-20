@@ -4,10 +4,8 @@ import (
 	"log"
 	"os"
 	proto "security_handin_2/grpc"
-	"security_handin_2/shared"
 	"security_handin_2/shared/cert"
 	"sync"
-	"time"
 )
 
 var (
@@ -17,6 +15,7 @@ var (
 	keyPath     = "/var/keys/clients/" + dockerId + "-key.pem"
 	caCertPath  = "/var/certs/ca/ca-cert.pem"
 	aggregate   = Aggregate{sum: 0}
+	clientReg   = make(chan bool, 1000)
 )
 
 type Aggregate struct {
@@ -30,13 +29,16 @@ type Server struct {
 }
 
 func main() {
-	shared.WriteToSharedFile(dockerId, shared.GetPath("hospital"))
-	creds, err := cert.LoadTLSCredentials(certPath, keyPath, caCertPath)
+	creds, err := cert.LoadTLSCredentials(certPath, keyPath, caCertPath, dockerId)
 	if err != nil {
 		log.Fatal("Could not load cert")
 	}
+
 	go StartHospitalServer(creds)
-	time.Sleep(time.Second * 8)
+
+	// Waits for the first register so we don't go directly to the empty waitgroup
+	<-clientReg
+
 	aggregate.wg.Wait()
 	log.Printf("sum: %d", aggregate.sum)
 }

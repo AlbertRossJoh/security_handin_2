@@ -1,6 +1,7 @@
 #!/bin/sh
 
 rm certs/*.pem
+rm certs/conf/*.cnf
 rm -rf shared_volume/*
 rm certs/ca/ca-cert.pem
 rm certs/ca/ca-cert.srl
@@ -11,4 +12,4 @@ chmod +x certs/ca/gen_ca.sh
 
 make generate
 
-docker compose up --build
+docker compose up --build --remove-orphans

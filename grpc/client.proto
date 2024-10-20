@@ -37,6 +37,7 @@ service ShareService{
 }
 
 service HospitalService{
+    rpc Test(EmptyArg) returns (Ack);
     rpc RegisterOutput(Share) returns (Ack);
     rpc RegisterClient(Id) returns (Ack);
 }

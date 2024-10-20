@@ -2,27 +2,14 @@ package service
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log"
-	"strconv"
 
 	proto "security_handin_2/grpc"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
-const SERVER_PORT = 6969
-
 func Test(serverId string, creds credentials.TransportCredentials) (proto.ErrorCode, error) {
-	conn, err := grpc.NewClient(fmt.Sprintf("%s:%s", serverId, strconv.Itoa(SERVER_PORT)),
-		grpc.WithTransportCredentials(creds))
-
-	if err != nil {
-		log.Println("Could not connect to server: ", serverId)
-		return 0, errors.New("Could not connect to server: " + serverId)
-	}
+	conn := getClientConn(serverId, creds)
 
 	shareServiceClient := proto.NewShareServiceClient(conn)
 
@@ -36,13 +23,7 @@ func Test(serverId string, creds credentials.TransportCredentials) (proto.ErrorC
 }
 
 func RegisterShare(share *proto.Share, toServerId string, creds credentials.TransportCredentials) (proto.ErrorCode, error) {
-	conn, err := grpc.NewClient(fmt.Sprintf("%s:%s", toServerId, strconv.Itoa(SERVER_PORT)),
-		grpc.WithTransportCredentials(creds))
-
-	if err != nil {
-		log.Println("Could not connect to server: ", toServerId)
-		return 0, errors.New("Could not connect to server: " + toServerId)
-	}
+	conn := getClientConn(toServerId, creds)
 
 	shareServiceClient := proto.NewShareServiceClient(conn)
 
@@ -53,4 +34,18 @@ func RegisterShare(share *proto.Share, toServerId string, creds credentials.Tran
 	}
 
 	return ack.ErrorCode, nil
+}
+
+func WaitForClientServiceStart(servers []string, creds credentials.TransportCredentials) {
+	for {
+		count := len(servers)
+		for _, serverId := range servers {
+			if _, err := Test(serverId, creds); err == nil {
+				count--
+			}
+		}
+		if count == 0 {
+			break
+		}
+	}
 }
