@@ -14,7 +14,6 @@ do
   fi
 done < "/var/hosts/nodes"
 acc="$acc,DNS:$(head -n 1 /var/hosts/hospital)"
-echo $acc
 
 echo "subjectAltName=$acc" >> "/var/certs/conf/$HOSTNAME-ext.cnf"
 
