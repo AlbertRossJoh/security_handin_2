@@ -50,5 +50,5 @@ func (o *OutShare) RegisterShare(share int, id string) {
 }
 
 func (o *OutShare) PrintShare() {
-	log.Println(o.out)
+	log.Println("share to server: ", o.out)
 }
