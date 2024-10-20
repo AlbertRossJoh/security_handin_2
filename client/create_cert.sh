@@ -25,7 +25,7 @@ echo "subjectAltName=$acc" >> "/var/certs/conf/$HOSTNAME-ext.cnf"
 openssl req -newkey rsa:4096 \
     -nodes -keyout /var/keys/clients/$HOSTNAME-key.pem \
     -out /var/certs/$HOSTNAME-req.pem \
-    -subj "/C=DK/L=Copenhagen/O=ITU/OU=Education/CN=Name $HOSTNAME/emailAddress=alrj@itu.dk" > /dev/null 2>&1
+    -subj "/C=DK/L=Copenhagen/O=ITU/OU=Education/CN=$HOSTNAME/emailAddress=alrj@itu.dk" > /dev/null 2>&1
 
 # 3. Use CA's private key to sign web server's CSR and get back the signed certificate
 openssl x509 \
