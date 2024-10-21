@@ -9,17 +9,22 @@ import (
 	"security_handin_2/shared"
 	"security_handin_2/shared/cert"
 	"security_handin_2/shared/service"
+
+	"google.golang.org/grpc/credentials"
 )
 
 var (
-	dockerId      = os.Getenv("HOSTNAME")
-	SERVER_PORT   = 6969
-	certPath      = "/var/certs/" + dockerId + "-cert.pem"
-	keyPath       = "/var/keys/clients/" + dockerId + "-key.pem"
-	caCertPath    = "/var/certs/ca/ca-cert.pem"
-	serverContext = ServerContext{Id2Int: map[string]int{}}
-	outShare      = OutShare{out: 0}
-	shareChan     = make(chan *proto.Share, 2)
+	dockerId          = os.Getenv("HOSTNAME")
+	SERVER_PORT       = 6969
+	serverCertPath    = "/var/certs/" + dockerId + "-server-cert.pem"
+	clientCertPath    = "/var/certs/" + dockerId + "-client-cert.pem"
+	serverKeyPath     = "/var/keys/clients/" + dockerId + "-server-key.pem"
+	clientKeyPath     = "/var/keys/clients/" + dockerId + "-client-key.pem"
+	caCertPath        = "/var/certs/ca/ca-cert.pem"
+	serverContext     = ServerContext{Id2Int: map[string]int{}}
+	outShare          = OutShare{out: 0}
+	shareChan         = make(chan *proto.Share, 1000)
+	clientNameToCreds = make(map[string]credentials.TransportCredentials)
 )
 
 const (
@@ -38,20 +43,28 @@ type ServerContext struct {
 func main() {
 	println("hi from " + dockerId)
 	//shared.WriteToSharedFile(dockerId, shared.GetPath(NodesFilename))
-	creds, err := cert.LoadTLSCredentials(certPath, keyPath, caCertPath, dockerId)
+	serverCreds, err := cert.LoadTLSServerCredentials(serverCertPath, serverKeyPath, caCertPath)
 	if err != nil {
-		log.Fatal("Could not load cert")
+		log.Panicln(err.Error())
+		log.Fatal("Could not load server cert")
 	}
-	go StartServer(creds)
+
+	go StartServer(serverCreds)
 
 	hospitalId := shared.GetFileContents(dockerId, shared.GetPath("hospital"))[0]
-	service.WaitForHospitalServiceStart([]string{hospitalId}, creds)
-	_, err = service.RegisterClient(dockerId, hospitalId, creds)
+	hospitalCreds := cert.LoadTLSClientCredentials(clientCertPath, clientKeyPath, caCertPath, hospitalId)
+
+	service.WaitForHospitalServiceStart([]string{hospitalId}, hospitalCreds)
+	_, err = service.RegisterClient(dockerId, hospitalId, hospitalCreds)
+
 	if err != nil {
 		log.Panicln(err.Error())
 	}
 	contents := shared.GetFileContents(dockerId, shared.GetPath(NodesFilename))
-	service.WaitForClientServiceStart(contents, creds)
+	for _, id := range contents {
+		clientNameToCreds[id] = cert.LoadTLSClientCredentials(clientCertPath, clientKeyPath, caCertPath, id)
+	}
+	service.WaitForClientServiceStart(contents, clientNameToCreds)
 
 	for i, id := range contents {
 		serverContext.Id2Int[id] = i
@@ -72,7 +85,7 @@ func main() {
 				&proto.Share{
 					Id:      dockerId,
 					Message: int32(secret.GetShare(id)),
-				}, id, creds)
+				}, id, clientNameToCreds[id])
 
 			if err != nil {
 				log.Println("could not dial: " + id)
@@ -90,5 +103,5 @@ func main() {
 	// patiently wait for the other clients
 	//time.Sleep(time.Second * 4)
 	outShare.PrintShare()
-	service.RegisterOutput(&proto.Share{Id: dockerId, Message: int32(outShare.out)}, hospitalId, creds)
+	service.RegisterOutput(&proto.Share{Id: dockerId, Message: int32(outShare.out)}, hospitalId, hospitalCreds)
 }

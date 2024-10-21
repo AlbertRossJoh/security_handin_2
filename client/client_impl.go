@@ -11,8 +11,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-var recievedIds = map[string]bool{}
-
 func StartServer(creds credentials.TransportCredentials) {
 	server := &Server{
 		id: dockerId,

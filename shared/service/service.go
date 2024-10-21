@@ -36,11 +36,11 @@ func RegisterShare(share *proto.Share, toServerId string, creds credentials.Tran
 	return ack.ErrorCode, nil
 }
 
-func WaitForClientServiceStart(servers []string, creds credentials.TransportCredentials) {
+func WaitForClientServiceStart(servers []string, creds map[string]credentials.TransportCredentials) {
 	for {
 		count := len(servers)
 		for _, serverId := range servers {
-			if _, err := Test(serverId, creds); err == nil {
+			if _, err := Test(serverId, creds[serverId]); err == nil {
 				count--
 			}
 		}

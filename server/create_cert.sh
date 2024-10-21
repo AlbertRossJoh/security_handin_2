@@ -1,27 +1,12 @@
 mkdir -p /var/keys/clients
 
 echo $HOSTNAME >> "/var/hosts/hospital"
-
-sleep 2
-acc=""
-
-while IFS= read -r line
-do
-  if [ -z "$acc" ]; then
-    acc="DNS:$line"
-  else
-    acc="$acc,DNS:$line"
-  fi
-done < "/var/hosts/nodes"
-acc="$acc,DNS:$(head -n 1 /var/hosts/hospital)"
-
-echo "subjectAltName=$acc" >> "/var/certs/conf/$HOSTNAME-ext.cnf"
+echo "subjectAltName=DNS:$HOSTNAME" >> "/var/certs/conf/$HOSTNAME-ext.cnf"
 
 # Create private key and CSR
 openssl req -newkey rsa:4096 \
     -nodes -keyout /var/keys/clients/$HOSTNAME-key.pem \
     -out /var/certs/$HOSTNAME-req.pem \
-    -addext "subjectAltName = $acc" \
     -subj "/C=DK/L=Copenhagen/O=ITU/OU=Education/CN=$HOSTNAME/emailAddress=alrj@itu.dk" > /dev/null 2>&1
 
 # Sign the cert

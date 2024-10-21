@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"os"
 
 	"google.golang.org/grpc/credentials"
 )
 
-func LoadTLSCredentials(certPath string, keyPath string, caCertPath string, dockerId string) (credentials.TransportCredentials, error) {
+func LoadTLSServerCredentials(certPath string, keyPath string, caCertPath string) (credentials.TransportCredentials, error) {
 	// Load server's certificate and private key
 	serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
@@ -25,11 +26,31 @@ func LoadTLSCredentials(certPath string, keyPath string, caCertPath string, dock
 		Certificates: []tls.Certificate{serverCert},
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    certPool,
-		ServerName:   dockerId,
 		RootCAs:      certPool,
 	}
 
 	return credentials.NewTLS(config), nil
+}
+
+func LoadTLSClientCredentials(certPath string, keyPath string, caCertPath string, dockerId string) credentials.TransportCredentials {
+	clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		log.Panicln("Could not load client certificate")
+	}
+
+	certPool, err := LoadCaCertPool(caCertPath)
+	if err != nil {
+		log.Panicln("Could not load CA cert")
+	}
+	config := &tls.Config{
+		Certificates:       []tls.Certificate{clientCert},
+		ClientCAs:          certPool,
+		RootCAs:            certPool,
+		ServerName:         dockerId,
+		InsecureSkipVerify: false,
+	}
+
+	return credentials.NewTLS(config)
 }
 
 func LoadCaCertPool(caCertPath string) (*x509.CertPool, error) {
