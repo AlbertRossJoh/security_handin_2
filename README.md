@@ -11,11 +11,15 @@ This project uses docker compose to automatically scale the amount of clients, t
 You just need to update the amount of replicates in the docker compose file, the project has only been tested with 3 peers, so no guarantees can be made for more peers.
 
 Given that docker is installed on your machine, and you have a Unix shell open you can run
-```
+
+```sh
 sh launch.sh
 ```
 or
-```
+```sh
 chmod +x launch.sh
 ./launch.sh
 ```
+
+Please be aware that the containers waits a bit before performing the protocol.
+

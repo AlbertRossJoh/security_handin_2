@@ -30,6 +30,6 @@ openssl x509 \
   -days 60 -CA /var/certs/ca/ca-cert.pem \
   -CAkey /var/certs/ca/ca-key.pem \
   -CAcreateserial -out /var/certs/$HOSTNAME-client-cert.pem \
-  -extensions usr_cert #> /dev/null 2>&1
+  -extensions usr_cert >/dev/null 2>&1
 
 go run ./client/
