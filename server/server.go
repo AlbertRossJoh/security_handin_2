@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	proto "security_handin_2/grpc"
+	"security_handin_2/shared"
 	"security_handin_2/shared/cert"
 	"sync"
 )
@@ -16,6 +17,7 @@ var (
 	caCertPath  = "/var/certs/ca/ca-cert.pem"
 	aggregate   = Aggregate{sum: 0}
 	clientReg   = make(chan bool, 1000)
+	nonce       = shared.NewNonce()
 )
 
 type Aggregate struct {

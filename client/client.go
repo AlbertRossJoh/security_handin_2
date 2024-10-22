@@ -25,7 +25,8 @@ var (
 	serverContext     = ServerContext{Id2Int: map[string]int{}}
 	outShare          = OutShare{out: 0}
 	shareChan         = make(chan *proto.Share, 1000)
-	registeredIds     = make(map[string]string)
+	registeredIds     = make(map[string]bool)
+	nonce             = shared.NewNonce()
 	clientNameToCreds = make(map[string]credentials.TransportCredentials)
 )
 
@@ -63,7 +64,7 @@ func main() {
 	}
 	contents := shared.GetFileContents(dockerId, shared.GetPath(NodesFilename))
 	for _, id := range contents {
-		registeredIds[id] = ""
+		registeredIds[id] = false
 		clientNameToCreds[id] = cert.LoadTLSClientCredentials(clientCertPath, clientKeyPath, caCertPath, id)
 	}
 	service.WaitForClientServiceStart(contents, clientNameToCreds)
@@ -100,10 +101,10 @@ func main() {
 	for i := 0; i < len(contents)-1; i++ {
 		in := <-shareChan
 		// for idempotence
-		guid, ok := registeredIds[in.Id]
-		if ok && in.Guid != guid {
+		used, ok := registeredIds[in.Id]
+		if good := nonce.Register(in.Guid); ok && !used && good {
 			outShare.RegisterShare(int(in.Message), in.Id)
-			registeredIds[in.Id] = guid
+			registeredIds[in.Id] = true
 		} else {
 			if !ok {
 				log.Panic("unknown id")

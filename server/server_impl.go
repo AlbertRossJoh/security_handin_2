@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-var recievedIds = map[string]string{}
+var recievedIds = map[string]bool{}
 
 func StartHospitalServer(creds credentials.TransportCredentials) {
 	server := &Server{
@@ -34,13 +34,11 @@ func StartHospitalServer(creds credentials.TransportCredentials) {
 }
 
 func (s *Server) RegisterOutput(ctx context.Context, in *proto.Share) (*proto.Ack, error) {
-	guid, ok := recievedIds[in.Id]
-	if ok && in.Guid != guid {
+	used, ok := recievedIds[in.Id]
+	if nonce.Register(in.Guid) && ok && !used {
 		aggregate.sum += int(in.Message)
-		recievedIds[in.Id] = guid
+		recievedIds[in.Id] = true
 		aggregate.wg.Done()
-	} else {
-		log.Panicln("wtf", guid, ok)
 	}
 	return &proto.Ack{
 		ErrorCode: proto.ErrorCode_SUCCESS,
@@ -50,7 +48,7 @@ func (s *Server) RegisterOutput(ctx context.Context, in *proto.Share) (*proto.Ac
 func (s *Server) RegisterClient(ctx context.Context, in *proto.Id) (*proto.Ack, error) {
 	aggregate.wg.Add(1)
 	clientReg <- true
-	recievedIds[in.Id] = ""
+	recievedIds[in.Id] = false
 	return &proto.Ack{
 		ErrorCode: proto.ErrorCode_SUCCESS,
 	}, nil
