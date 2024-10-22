@@ -14,7 +14,6 @@ func RegisterOutput(share *proto.Share, toServerId string, creds credentials.Tra
 	hospitalServiceClient := proto.NewHospitalServiceClient(conn)
 
 	ack, err := hospitalServiceClient.RegisterOutput(context.Background(), share)
-
 	if err != nil {
 		return 0, err
 	}
@@ -28,7 +27,6 @@ func RegisterClient(fromServerId string, toServerId string, creds credentials.Tr
 	hospitalServiceClient := proto.NewHospitalServiceClient(conn)
 
 	ack, err := hospitalServiceClient.RegisterClient(context.Background(), &proto.Id{Id: fromServerId})
-
 	if err != nil {
 		return 0, err
 	}
@@ -42,7 +40,6 @@ func HospitalTest(serverId string, creds credentials.TransportCredentials) (prot
 	shareServiceClient := proto.NewHospitalServiceClient(conn)
 
 	ack, err := shareServiceClient.Test(context.Background(), &proto.EmptyArg{})
-
 	if err != nil {
 		return 0, err
 	}

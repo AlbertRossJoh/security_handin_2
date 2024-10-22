@@ -14,9 +14,6 @@ message Ack {
     ErrorCode errorCode = 1;
 }
 
-message msg{
-    string message = 1;
-}
 
 message EmptyArg{
 
@@ -25,10 +22,12 @@ message EmptyArg{
 message Share{
     string id = 1;
     int32 message = 2;
+    string guid = 3;
 }
 
 message Id{
     string id = 1;
+    string guid = 2;
 }
 
 service ShareService{

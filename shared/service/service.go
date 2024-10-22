@@ -14,7 +14,6 @@ func Test(serverId string, creds credentials.TransportCredentials) (proto.ErrorC
 	shareServiceClient := proto.NewShareServiceClient(conn)
 
 	ack, err := shareServiceClient.Test(context.Background(), &proto.EmptyArg{})
-
 	if err != nil {
 		return 0, err
 	}
@@ -28,7 +27,6 @@ func RegisterShare(share *proto.Share, toServerId string, creds credentials.Tran
 	shareServiceClient := proto.NewShareServiceClient(conn)
 
 	ack, err := shareServiceClient.RegisterShare(context.Background(), share)
-
 	if err != nil {
 		return 0, err
 	}

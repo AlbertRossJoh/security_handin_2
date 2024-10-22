@@ -29,6 +29,7 @@ type Server struct {
 }
 
 func main() {
+	log.Println("hi from:", dockerId)
 	creds, err := cert.LoadTLSServerCredentials(certPath, keyPath, caCertPath)
 	if err != nil {
 		log.Fatal("Could not load cert")

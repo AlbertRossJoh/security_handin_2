@@ -4,12 +4,13 @@ import (
 	"log"
 	"math/rand"
 	"os"
-
-	proto "security_handin_2/grpc"
 	"security_handin_2/shared"
 	"security_handin_2/shared/cert"
 	"security_handin_2/shared/service"
 
+	proto "security_handin_2/grpc"
+
+	"github.com/google/uuid"
 	"google.golang.org/grpc/credentials"
 )
 
@@ -24,6 +25,7 @@ var (
 	serverContext     = ServerContext{Id2Int: map[string]int{}}
 	outShare          = OutShare{out: 0}
 	shareChan         = make(chan *proto.Share, 1000)
+	registeredIds     = make(map[string]string)
 	clientNameToCreds = make(map[string]credentials.TransportCredentials)
 )
 
@@ -41,8 +43,8 @@ type ServerContext struct {
 }
 
 func main() {
-	println("hi from " + dockerId)
-	//shared.WriteToSharedFile(dockerId, shared.GetPath(NodesFilename))
+	log.Println("hi from: " + dockerId)
+	// shared.WriteToSharedFile(dockerId, shared.GetPath(NodesFilename))
 	serverCreds, err := cert.LoadTLSServerCredentials(serverCertPath, serverKeyPath, caCertPath)
 	if err != nil {
 		log.Panicln(err.Error())
@@ -56,12 +58,12 @@ func main() {
 
 	service.WaitForHospitalServiceStart([]string{hospitalId}, hospitalCreds)
 	_, err = service.RegisterClient(dockerId, hospitalId, hospitalCreds)
-
 	if err != nil {
 		log.Panicln(err.Error())
 	}
 	contents := shared.GetFileContents(dockerId, shared.GetPath(NodesFilename))
 	for _, id := range contents {
+		registeredIds[id] = ""
 		clientNameToCreds[id] = cert.LoadTLSClientCredentials(clientCertPath, clientKeyPath, caCertPath, id)
 	}
 	service.WaitForClientServiceStart(contents, clientNameToCreds)
@@ -85,8 +87,8 @@ func main() {
 				&proto.Share{
 					Id:      dockerId,
 					Message: int32(secret.GetShare(id)),
+					Guid:    uuid.NewString(),
 				}, id, clientNameToCreds[id])
-
 			if err != nil {
 				log.Println("could not dial: " + id)
 				log.Panic(err.Error())
@@ -97,11 +99,20 @@ func main() {
 
 	for i := 0; i < len(contents)-1; i++ {
 		in := <-shareChan
-		outShare.RegisterShare(int(in.Message), in.Id)
+		// for idempotence
+		guid, ok := registeredIds[in.Id]
+		if ok && in.Guid != guid {
+			outShare.RegisterShare(int(in.Message), in.Id)
+			registeredIds[in.Id] = guid
+		} else {
+			if !ok {
+				log.Panic("unknown id")
+			}
+		}
 	}
 
 	// patiently wait for the other clients
-	//time.Sleep(time.Second * 4)
+	// time.Sleep(time.Second * 4)
 	outShare.PrintShare()
-	service.RegisterOutput(&proto.Share{Id: dockerId, Message: int32(outShare.out)}, hospitalId, hospitalCreds)
+	service.RegisterOutput(&proto.Share{Id: dockerId, Message: int32(outShare.out), Guid: uuid.NewString()}, hospitalId, hospitalCreds)
 }

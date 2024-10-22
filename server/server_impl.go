@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-var recievedIds = map[string]bool{}
+var recievedIds = map[string]string{}
 
 func StartHospitalServer(creds credentials.TransportCredentials) {
 	server := &Server{
@@ -20,7 +20,6 @@ func StartHospitalServer(creds credentials.TransportCredentials) {
 	}
 
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(SERVER_PORT))
-
 	if err != nil {
 		log.Fatalf("Could not create the server %v", err)
 	}
@@ -35,11 +34,13 @@ func StartHospitalServer(creds credentials.TransportCredentials) {
 }
 
 func (s *Server) RegisterOutput(ctx context.Context, in *proto.Share) (*proto.Ack, error) {
-	_, ok := recievedIds[in.Id]
-	if !ok {
+	guid, ok := recievedIds[in.Id]
+	if ok && in.Guid != guid {
 		aggregate.sum += int(in.Message)
-		recievedIds[in.Id] = true
+		recievedIds[in.Id] = guid
 		aggregate.wg.Done()
+	} else {
+		log.Panicln("wtf", guid, ok)
 	}
 	return &proto.Ack{
 		ErrorCode: proto.ErrorCode_SUCCESS,
@@ -49,6 +50,7 @@ func (s *Server) RegisterOutput(ctx context.Context, in *proto.Share) (*proto.Ac
 func (s *Server) RegisterClient(ctx context.Context, in *proto.Id) (*proto.Ack, error) {
 	aggregate.wg.Add(1)
 	clientReg <- true
+	recievedIds[in.Id] = ""
 	return &proto.Ack{
 		ErrorCode: proto.ErrorCode_SUCCESS,
 	}, nil

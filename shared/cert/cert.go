@@ -23,10 +23,11 @@ func LoadTLSServerCredentials(certPath string, keyPath string, caCertPath string
 	}
 	// Create the credentials and return it
 	config := &tls.Config{
-		Certificates: []tls.Certificate{serverCert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    certPool,
-		RootCAs:      certPool,
+		Certificates:       []tls.Certificate{serverCert},
+		ClientAuth:         tls.RequireAndVerifyClientCert,
+		ClientCAs:          certPool,
+		RootCAs:            certPool,
+		InsecureSkipVerify: false,
 	}
 
 	return credentials.NewTLS(config), nil
@@ -44,6 +45,7 @@ func LoadTLSClientCredentials(certPath string, keyPath string, caCertPath string
 	}
 	config := &tls.Config{
 		Certificates:       []tls.Certificate{clientCert},
+		ClientAuth:         tls.RequireAndVerifyClientCert,
 		ClientCAs:          certPool,
 		RootCAs:            certPool,
 		ServerName:         dockerId,
